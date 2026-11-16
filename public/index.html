@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexaLibrary AI - Smart B.Tech Library System</title>
+    <style>
+        :root {
+            --bg-main: #090d16;
+            --bg-card: #111827;
+            --border-color: #1f293d;
+            --primary: #7c3aed;
+            --primary-hover: #6d28d9;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* AUTH SECTION */
+        #auth-wrapper {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            padding: 1rem;
+        }
+        .auth-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 2.5rem;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        }
+        .auth-card h2 { margin-top: 0; color: #a78bfa; text-align: center; }
+        .auth-card input, .auth-card select {
+            width: 100%;
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+        }
+        .auth-card button {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+        .auth-card button:hover { background: var(--primary-hover); }
+
+        /* MAIN APP LAYOUT */
+        #app-wrapper {
+            display: none;
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+        /* SIDEBAR */
+        sidebar {
+            width: 260px;
+            min-width: 260px;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            height: 100%;
+        }
+        .brand { font-size: 1.2rem; font-weight: bold; color: var(--primary); margin-bottom: 2rem; display: flex; align-items: center; gap: 8px; }
+        .nav-item {
+            padding: 0.8rem 1rem;
+            color: var(--text-muted);
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 0.4rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: 0.2s;
+        }
+        .nav-item:hover, .nav-item.active { background: rgba(124,58,237,0.2); color: #c4b5fd; }
+
+        /* CONTENT AREA */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            min-width: 0;
+        }
+        header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .dashboard-body {
+            padding: 2rem;
+            flex: 1;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* BOOKS GRID */
+        .books-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1.2rem;
+        }
+        .book-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* FLOATING CHAT DRAWER */
+        #lumi-chat-drawer {
+            position: fixed;
+            bottom: 85px; right: 24px;
+            width: 380px; height: 520px;
+            max-width: calc(100vw - 32px);
+            max-height: calc(100vh - 110px);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            display: none;
+            flex-direction: column;
+            z-index: 1000;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        /* ========================================================== */
+        /* MOBILE & TABLET RESPONSIVE MEDIA QUERIES                   */
+        /* ========================================================== */
+        @media (max-width: 850px) {
+            body {
+                flex-direction: column !important;
+                height: 100vh !important;
+                overflow-y: auto !important;
+            }
+            #app-wrapper {
+                flex-direction: column !important;
+                height: auto !important;
+                overflow-y: visible !important;
+            }
+            sidebar {
+                width: 100% !important;
+                min-width: 100% !important;
+                height: auto !important;
+                flex-direction: row !important;
+                overflow-x: auto !important;
+                padding: 0.8rem !important;
+                gap: 6px !important;
+                align-items: center !important;
+                flex-shrink: 0 !important;
+            }
+            .brand { display: none !important; } /* Mobile par top brand title hide karke space bachate hain */
+            .nav-item {
+                white-space: nowrap !important;
+                margin-bottom: 0 !important;
+                font-size: 0.8rem !important;
+                padding: 0.5rem 0.7rem !important;
+            }
+            main {
+                height: auto !important;
+                overflow-y: visible !important;
+            }
+            header {
+                padding: 0.8rem 1rem !important;
+            }
+            .dashboard-body {
+                padding: 1rem !important;
+            }
+            #lumi-chat-drawer {
+                width: 92vw !important;
+                right: 4vw !important;
+                bottom: 80px !important;
+                height: 440px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- AUTHENTICATION SECTION -->
+    <div id="auth-wrapper">
+        <div class="auth-card">
+            <h2>📚 NexaLibrary AI</h2>
+            
+            <!-- Login Form -->
+            <form id="login-section" onsubmit="handleLogin(event)">
+                <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-top: 0;">Sign in to your B.Tech Library Portal</p>
+                <select id="login-user-select" style="cursor: pointer;">
+                    <option value="admin">Admin / Librarian</option>
+                    <option value="student">Student User</option>
+                </select>
+                <input type="email" id="login-email" value="aashutomar246@gmail.com" required placeholder="Enter Email Address">
+                <input type="password" id="login-password" placeholder="Enter Password" required>
+                <button type="submit">Sign In to Dashboard</button>
+                <p style="text-align: center; font-size: 0.85rem; margin-top: 1rem; color: var(--text-muted);">
+                    New member? <span onclick="toggleAuthMode('register')" style="color: #a78bfa; cursor: pointer; font-weight: bold;">Register here</span>
+                </p>
+            </form>
+
+            <!-- Register Form -->
+            <form id="register-section" onsubmit="handleRegister(event)" style="display: none;">
+                <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-top: 0;">Create Student/Admin Account</p>
+                <input type="text" id="reg-name" required placeholder="Full Name">
+                <input type="email" id="reg-email" required placeholder="Email Address">
+                <input type="password" id="reg-pass" required placeholder="Password">
+                <button type="submit">Complete Registration</button>
+                <p style="text-align: center; font-size: 0.85rem; margin-top: 1rem; color: var(--text-muted);">
+                    Already have an account? <span onclick="toggleAuthMode('login')" style="color: #a78bfa; cursor: pointer; font-weight: bold;">Sign In</span>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP WRAPPER -->
+    <div id="app-wrapper">
+        <!-- SIDEBAR NAVIGATION -->
+        <sidebar>
+            <div class="brand">📖 NexaLibrary AI</div>
+            <div class="nav-item active" onclick="switchTab('home-tab', this)">🏠 Dashboard</div>
+            <div class="nav-item" onclick="switchTab('catalogue-tab', this)">📚 Catalogue (40+)</div>
+            <div class="nav-item" onclick="switchTab('tokens-tab', this)">🎟️ Saved Tokens</div>
+            <div class="nav-item" onclick="switchTab('reader-tab', this)">📖 Digital Reader</div>
+            <div class="nav-item" onclick="switchTab('members-tab', this)">👥 Members</div>
+            <div class="nav-item" onclick="switchTab('settings-tab', this)">⚙️ Settings</div>
+            <div class="nav-item" onclick="logout()" style="margin-top: auto; color: #ef4444;">🚪 Sign Out</div>
+        </sidebar>
+
+        <!-- MAIN DASHBOARD CONTENT -->
+        <main>
+            <header>
+                <h3 id="tab-title" style="margin: 0; color: #f8fafc; font-size: 1.1rem;">Dashboard Overview</h3>
+                <span id="logged-user-name" style="font-size: 0.85rem; color: #a78bfa; font-weight: bold;">Aashu Tomar (ADMIN)</span>
+            </header>
+
+            <div class="dashboard-body">
+                
+                <!-- 1. HOME TAB -->
+                <div id="home-tab" class="tab-content active">
+                    <!-- Live Library Notice Board (Visible to All) -->
+                    <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+                        <h3 style="color: #a78bfa; margin-top: 0; display: flex; align-items: center; gap: 8px;">📢 Library Notice Board & Announcements</h3>
+                        <div id="library-notice-board"></div>
+                    </div>
+
+                    <!-- Admin Control Panel (Visible ONLY to Admin) -->
+                    <div id="admin-control-section" style="display: none;"></div>
+
+                    <!-- Quick Stats Cards -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.2rem; margin-bottom: 2rem;">
+                        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.2rem; border-radius: 10px;">
+                            <span style="color: var(--text-muted); font-size: 0.85rem;">Active Issue Tokens</span>
+                            <h2 id="stat-tokens" style="margin: 0.3rem 0 0; color: #10b981;">0</h2>
+                        </div>
+                        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.2rem; border-radius: 10px;">
+                            <span style="color: var(--text-muted); font-size: 0.85rem;">Token Validity Window</span>
+                            <h2 style="margin: 0.3rem 0 0; color: #f59e0b;">14 Days</h2>
+                        </div>
+                        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.2rem; border-radius: 10px;">
+                            <span style="color: var(--text-muted); font-size: 0.85rem;">Late Return Fine</span>
+                            <h2 style="margin: 0.3rem 0 0; color: #ef4444;">₹10 / Day</h2>
+                        </div>
+                    </div>
+
+                    <!-- Stream Quick Filter Links -->
+                    <h3 style="color: #f8fafc; margin-bottom: 1rem;">B.Tech Engineering Streams</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+                        <div onclick="filterAndOpenCatalogue('CSE')" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.2rem; border-radius: 10px; cursor: pointer; text-align: center;">
+                            <h4 style="color: #a78bfa; margin: 0 0 0.3rem;">💻 CSE Stream</h4>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Algorithms, OS, DBMS</span>
+                        </div>
+                        <div onclick="filterAndOpenCatalogue('AIML')" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.2rem; border-radius: 10px; cursor: pointer; text-align: center;">
+                            <h4 style="color: #a78bfa; margin: 0 0 0.3rem;">🤖 AI & ML Stream</h4>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Deep Learning & LLMs</span>
+                        </div>
+                        <div onclick="filterAndOpenCatalogue('IOT')" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.2rem; border-radius: 10px; cursor: pointer; text-align: center;">
+                            <h4 style="color: #a78bfa; margin: 0 0 0.3rem;">🌐 IoT Stream</h4>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">ESP32, MQTT & Sensors</span>
+                        </div>
+                        <div onclick="filterAndOpenCatalogue('ECE')" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.2rem; border-radius: 10px; cursor: pointer; text-align: center;">
+                            <h4 style="color: #a78bfa; margin: 0 0 0.3rem;">⚡ ECE Stream</h4>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">DSP, VLSI & Networks</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. CATALOGUE TAB -->
+                <div id="catalogue-tab" class="tab-content">
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                        <button onclick="filterBooks('All')" style="background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">All Streams</button>
+                        <button onclick="filterBooks('CSE')" style="background: var(--bg-card); color: #cbd5e1; border: 1px solid var(--border-color); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">CSE (10)</button>
+                        <button onclick="filterBooks('AIML')" style="background: var(--bg-card); color: #cbd5e1; border: 1px solid var(--border-color); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">AIML (10)</button>
+                        <button onclick="filterBooks('IOT')" style="background: var(--bg-card); color: #cbd5e1; border: 1px solid var(--border-color); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">IoT (10)</button>
+                        <button onclick="filterBooks('ECE')" style="background: var(--bg-card); color: #cbd5e1; border: 1px solid var(--border-color); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">ECE (10)</button>
+                    </div>
+                    <div id="books-list" class="books-grid"></div>
+                </div>
+
+                <!-- 3. TOKENS TAB -->
+                <div id="tokens-tab" class="tab-content">
+                    <h3 style="color: #a78bfa; margin-top: 0;">My Saved Issue Passes & Tokens</h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">Manage your active book issue passes or toggle status between Active and Dead.</p>
+                    <div id="saved-tokens-list" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+                </div>
+
+                <!-- 4. READER TAB -->
+                <div id="reader-tab" class="tab-content">
+                    <h3 id="reader-book-title" style="color: #a78bfa; margin-top: 0;">📖 Digital Reader</h3>
+                    <div id="reader-box" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 12px;"></div>
+                </div>
+
+                <!-- 5. MEMBERS TAB -->
+                <div id="members-tab" class="tab-content">
+                    <h3 style="color: #a78bfa; margin-top: 0;">Library Members & Profiles</h3>
+                    <div id="members-list"></div>
+                </div>
+
+                <!-- 6. SETTINGS TAB -->
+                <div id="settings-tab" class="tab-content">
+                    <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 12px; max-width: 600px;">
+                        <h3 style="color: #a78bfa; margin-top: 0;">Library System Preferences</h3>
+                        
+                        <div style="margin-bottom: 1rem;">
+                            <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">Your Display Name</label>
+                            <input type="text" id="set-name" style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); color: white; padding: 0.6rem; border-radius: 6px; font-size: 0.9rem;">
+                        </div>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">AI Assistant Mode</label>
+                            <select id="set-ai-mode" style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); color: white; padding: 0.6rem; border-radius: 6px; font-size: 0.9rem;">
+                                <option value="standard">Standard Library & Concept Mode</option>
+                                <option value="exam">Exam Revision & Derivation Mode</option>
+                            </select>
+                        </div>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">Default B.Tech Stream Preference</label>
+                            <select id="set-default-stream" style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); color: white; padding: 0.6rem; border-radius: 6px; font-size: 0.9rem;">
+                                <option value="All">All Streams</option>
+                                <option value="CSE">CSE Stream</option>
+                                <option value="AIML">AI & ML Stream</option>
+                                <option value="IOT">IoT Stream</option>
+                                <option value="ECE">ECE Stream</option>
+                            </select>
+                        </div>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">Theme Accent Color</label>
+                            <select id="set-theme-accent" style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); color: white; padding: 0.6rem; border-radius: 6px; font-size: 0.9rem;">
+                                <option value="#7c3aed">Nexa Purple (#7c3aed)</option>
+                                <option value="#10b981">Emerald Green (#10b981)</option>
+                                <option value="#2563eb">Cyber Blue (#2563eb)</option>
+                                <option value="#f59e0b">Amber Gold (#f59e0b)</option>
+                            </select>
+                        </div>
+
+                        <div style="margin-bottom: 1.2rem; display: flex; align-items: center; justify-content: space-between; background: var(--bg-main); padding: 0.8rem; border-radius: 6px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 8px;">
+                            <div>
+                                <strong style="font-size: 0.85rem; color: #f8fafc; display: block;">14-Day Due Date Reminders</strong>
+                                <span style="font-size: 0.75rem; color: var(--text-muted);">Get alerts when book return date approaches.</span>
+                            </div>
+                            <input type="checkbox" id="set-reminder-toggle" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);">
+                        </div>
+
+                        <div style="display: flex; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap;">
+                            <button onclick="saveAllSettings()" style="background: var(--primary); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: bold; cursor: pointer; flex: 1; min-width: 120px;">Save Settings</button>
+                            <button onclick="clearSystemCache()" style="background: #ef4444; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: bold; cursor: pointer; flex: 1; min-width: 120px;">Clear Cache</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- FLOATING LUMI AI CHAT WIDGET -->
+    <div id="lumi-chat-drawer">
+        <div style="background: linear-gradient(135deg, var(--primary), #4f46e5); padding: 1rem; color: white; font-weight: bold; display: flex; justify-content: space-between; align-items: center; border-radius: 16px 16px 0 0;">
+            <span>🤖 Lumi AI (Library & Exam Assistant)</span>
+            <span onclick="toggleLumiChat()" style="cursor: pointer; padding: 4px;">✖</span>
+        </div>
+        
+        <div id="chat-messages" style="flex: 1; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.8rem; font-size: 0.88rem;">
+            <div style="background: #1e293b; padding: 0.8rem; border-radius: 10px; color: #cbd5e1; max-width: 90%;">
+                Hello! I am Lumi AI. Ask me about library book tokens, 14-day issue rules, late fees, or B.Tech exams!
+            </div>
+        </div>
+
+        <div style="padding: 0.8rem; border-top: 1px solid var(--border-color); display: flex; gap: 0.5rem; background: #0f172a;">
+            <input type="text" id="user-msg-input" placeholder="Ask Lumi anything..." onkeypress="if(event.key==='Enter') sendLumiMessage()" style="flex: 1; background: var(--bg-main); border: 1px solid var(--border-color); color: white; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; min-width: 0;">
+            <button onclick="sendLumiMessage()" style="background: var(--primary); color: white; border: none; padding: 0.6rem 1rem; border-radius: 6px; cursor: pointer; font-weight: bold;">Send</button>
+        </div>
+    </div>
+
+    <!-- FLOATING CHAT TOGGLE BUTTON -->
+    <button onclick="toggleLumiChat()" style="position: fixed; bottom: 20px; right: 24px; background: var(--primary); color: white; border: none; width: 55px; height: 55px; border-radius: 50%; cursor: pointer; box-shadow: 0 4px 15px rgba(124,58,237,0.5); font-size: 1.4rem; z-index: 1000; display: flex; justify-content: center; align-items: center;">
+        🤖
+    </button>
+
+    <!-- Connect JavaScript File -->
+    <script src="app.js"></script>
+</body>
+</html>
