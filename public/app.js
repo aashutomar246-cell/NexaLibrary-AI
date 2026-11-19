@@ -69,7 +69,6 @@ function toggleAuthMode(mode) {
     }
 }
 
-// Har user ke email ke hisab se alag storage key banegi taaki data leak na ho
 function getTokenStorageKey() {
     if (!loggedInUser) return 'nexa_guest_tokens';
     return `nexa_tokens_${loggedInUser.email.toLowerCase().replace(/[@.]/g, '_')}`;
@@ -79,9 +78,30 @@ function getStoredTokens() {
     return JSON.parse(localStorage.getItem(getTokenStorageKey()) || '[]');
 }
 
+function recordStudentLogin(name, email) {
+    const students = JSON.parse(localStorage.getItem('nexa_active_students') || '[]');
+    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ", " + new Date().toLocaleDateString();
+    const existingIndex = students.findIndex(s => s.email.toLowerCase() === email.toLowerCase());
+
+    if (existingIndex !== -1) {
+        students[existingIndex].name = name || students[existingIndex].name;
+        students[existingIndex].lastLogin = nowTime;
+        students[existingIndex].loginCount = (students[existingIndex].loginCount || 1) + 1;
+    } else {
+        students.unshift({
+            name: name || email.split('@')[0],
+            email: email.toLowerCase(),
+            lastLogin: nowTime,
+            loginCount: 1
+        });
+    }
+
+    localStorage.setItem('nexa_active_students', JSON.stringify(students));
+}
+
 async function handleLogin(event) {
     event.preventDefault();
-    
+
     const userSelectElem = document.getElementById('login-user-select');
     const emailElem = document.getElementById('login-email');
     const passwordElem = document.getElementById('login-password');
@@ -95,7 +115,6 @@ async function handleLogin(event) {
         return;
     }
 
-    // Strict Admin check: Sirf Aashu Tomar ki official email hi admin access le sakti hai
     const ADMIN_EMAIL = "aashutomar246@gmail.com";
     let finalRole = 'student';
     let uName = "Student User";
@@ -109,10 +128,11 @@ async function handleLogin(event) {
         uName = "Aashu Tomar (ADMIN)";
     } else {
         finalRole = 'student';
-        // Check if registered student exists in local storage
         const registeredUsers = JSON.parse(localStorage.getItem('nexa_registered_users') || '[]');
         const foundUser = registeredUsers.find(u => u.email.toLowerCase() === enteredEmail);
-        uName = foundUser ? `${foundUser.name} (STUDENT)` : `${enteredEmail.split('@')[0]} (STUDENT)`;
+        const cleanStudentName = foundUser ? foundUser.name : enteredEmail.split('@')[0];
+        uName = `${cleanStudentName} (STUDENT)`;
+        recordStudentLogin(cleanStudentName, enteredEmail);
     }
 
     loggedInUser = { name: uName, email: enteredEmail, role: finalRole };
@@ -153,14 +173,12 @@ async function handleRegister(event) {
     if (!regName || !regEmail || !regPass) return;
 
     const registeredUsers = JSON.parse(localStorage.getItem('nexa_registered_users') || '[]');
-    if (registeredUsers.some(u => u.email.toLowerCase() === regEmail)) {
-        alert('⚠️ This email is already registered. Please Sign In.');
-        toggleAuthMode('login');
-        return;
+    if (!registeredUsers.some(u => u.email.toLowerCase() === regEmail)) {
+        registeredUsers.push({ name: regName, email: regEmail, password: regPass, role: 'student' });
+        localStorage.setItem('nexa_registered_users', JSON.stringify(registeredUsers));
     }
 
-    registeredUsers.push({ name: regName, email: regEmail, password: regPass, role: 'student' });
-    localStorage.setItem('nexa_registered_users', JSON.stringify(registeredUsers));
+    recordStudentLogin(regName, regEmail);
 
     alert('✅ Account Created Successfully! Please Sign In with your email.');
     toggleAuthMode('login');
@@ -217,7 +235,7 @@ function renderBooks(books) {
                 </div>
                 <h4 style="margin: 0 0 0.3rem; color: #f8fafc; font-size: 1rem; line-height: 1.3;">${b.title}</h4>
                 <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0 0 0.6rem;">By ${b.author}</p>
-                
+
                 <div style="background: #0f172a; border: 1px solid #1e293b; padding: 0.6rem; border-radius: 6px; font-size: 0.75rem; margin-bottom: 0.8rem; color: #cbd5e1;">
                     <strong style="color: #a78bfa;">✨ Key Feature:</strong> ${b.feature}<br>
                     <span style="color: #94a3b8; font-size: 0.7rem;">Formats: ${b.format}</span>
@@ -328,7 +346,7 @@ function renderAdminControlPanel() {
             <div style="background: var(--bg-card); border: 1px solid var(--primary); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
                 <h3 style="color: #a78bfa; margin-top: 0; display: flex; align-items: center; gap: 8px; font-weight: 600;">🛠️ Admin Control Panel</h3>
                 <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.2rem;">Upload books & broadcast announcements (Admin Exclusive).</p>
-                
+
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem;">
                     <div style="background: #0f172a; padding: 1.2rem; border-radius: 8px; border: 1px solid var(--border-color);">
                         <h4 style="color: #f8fafc; margin-top: 0; font-size: 0.95rem;">📖 Upload Book</h4>
@@ -367,7 +385,7 @@ function requestToken(bookId) {
 
     const tokensArray = getStoredTokens();
     const generatedCode = 'TOKEN-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-    
+
     tokensArray.unshift({
         id: Date.now(),
         ownerEmail: loggedInUser.email,
@@ -439,7 +457,7 @@ function readBook(bookId) {
     currentBookId = bookId;
     const rTitle = document.getElementById('reader-book-title');
     if (rTitle) rTitle.innerText = `📖 Reader: ${book.title}`;
-    
+
     let optionsHTML = '';
     for (let i = 1; i <= 30; i++) optionsHTML += `<option value="${i}">Page ${i} of 30</option>`;
 
@@ -501,26 +519,29 @@ function loadMembers() {
     const container = document.getElementById('members-list');
     if (!container || !loggedInUser) return;
 
-    // Admin ko sabhi registered students ki list dikhegi
     if (loggedInUser.role === 'admin') {
-        const registeredUsers = JSON.parse(localStorage.getItem('nexa_registered_users') || '[]');
-        const studentsHTML = registeredUsers.map(u => `
+        const activeStudents = JSON.parse(localStorage.getItem('nexa_active_students') || '[]');
+        const studentsHTML = activeStudents.map(s => `
             <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                <div><strong style="color: #f8fafc;">${u.name}</strong><br><span style="font-size: 0.8rem; color: var(--text-muted);">${u.email}</span></div>
-                <span style="background: #1e293b; color: #94a3b8; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold;">STUDENT</span>
+                <div>
+                    <strong style="color: #f8fafc;">${s.name}</strong><br>
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">${s.email}</span><br>
+                    <span style="font-size: 0.72rem; color: #a78bfa;">Last Login: ${s.lastLogin || 'Recently'} | Logins: ${s.loginCount || 1}</span>
+                </div>
+                <span style="background: #1e293b; color: #10b981; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold;">STUDENT</span>
             </div>
         `).join('');
 
         container.innerHTML = `
             <div style="display: flex; flex-direction: column; gap: 0.9rem;">
-                <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--primary); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <div><strong style="color: #a78bfa;">${loggedInUser.name} (You)</strong><br><span style="font-size: 0.8rem; color: var(--text-muted);">${loggedInUser.email}</span></div>
                     <span style="background: rgba(124,58,237,0.3); color: #c4b5fd; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold;">ADMIN</span>
                 </div>
-                ${studentsHTML || '<p style="color: var(--text-muted); font-size: 0.85rem;">No additional students registered yet.</p>'}
+                <h4 style="margin: 0.4rem 0 0; color: #f8fafc; font-size: 0.95rem;">Logged-In Students (${activeStudents.length})</h4>
+                ${studentsHTML || '<p style="color: var(--text-muted); font-size: 0.85rem; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">Abhi tak kisi student ne login nahi kiya hai.</p>'}
             </div>`;
     } else {
-        // Student ko sirf apna khud ka profile data dikhega
         container.innerHTML = `
             <div style="padding: 1.5rem; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-color);">
                 <h4 style="margin: 0 0 0.5rem 0; color: #a78bfa;">👤 My Student Profile</h4>
